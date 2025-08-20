@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Edições – Jornal da Operação{% endblock %}
+{% block content %}
+  {% if latest %}
+  <section>
+    <h1>Edição mais recente</h1>
+    <article class="card">
+      <div class="card-body">
+        <h2>{{ latest.title }} – Semana {{ latest.week_number }}</h2>
+        <p><strong>Período:</strong> {{ latest.start_date }} a {{ latest.end_date }}</p>
+        <a href="{{ latest.get_absolute_url }}" class="btn">Abrir Flipbook</a>
+      </div>
+    </article>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Histórico</h2>
+    <div class="grid">
+      {% for it in others %}
+        <article class="card">
+          <div class="card-body">
+            <h3>{{ it.title }} – Semana {{ it.week_number }}</h3>
+            <p>{{ it.start_date }} a {{ it.end_date }}</p>
+            <a href="{{ it.get_absolute_url }}" class="btn btn-light">Ver edição</a>
+          </div>
+        </article>
+      {% empty %}
+        <p>Sem edições anteriores.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

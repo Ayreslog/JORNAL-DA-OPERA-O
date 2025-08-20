@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Jornal da Operação{% endblock %}</title>
+  {% block meta %}{% endblock %}
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <a href="/" class="logo">Jornal da Operação</a>
+      <nav>
+        <a href="/upload/" class="btn">Nova edição</a>
+      </nav>
+    </div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">© {% now "Y" %} - Jornal da Operação</footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Nova edição – Upload{% endblock %}
+{% block content %}
+  <h1>Enviar nova edição (PDF)</h1>
+  <form method="post" enctype="multipart/form-data" class="form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">Enviar</button>
+  </form>
+  <p class="muted">Dica: exporte do Google Slides em PDF e envie aqui.</p>
+{% endblock %}

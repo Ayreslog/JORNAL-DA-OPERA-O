@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+{% block title %}{{ issue.title }} – Semana {{ issue.week_number }}{% endblock %}
+{% block meta %}
+  <meta property="og:title" content="{{ issue.title }} – Semana {{ issue.week_number }}" />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="{{ pages.0.image.url }}" />
+  <meta property="og:url" content="{{ request.build_absolute_uri }}" />
+  <meta name="twitter:card" content="summary_large_image" />
+{% endblock %}
+{% block head %}
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/4.1.0/turn.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --secondary: #3498db;
+      --light: #ecf0f1;
+      --dark: #2c3e50;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .flipbook-container {
+      position: relative;
+      max-width: 900px;
+      margin: 0 auto;
+      box-shadow: var(--shadow);
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    #flipbook {
+      width: 100%;
+      height: 600px;
+      background: #f8f9fa;
+    }
+    
+    #flipbook .page {
+      background-color: white;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      overflow: hidden;
+    }
+    
+    /* Controles */
+    .flipbook-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      background: var(--primary);
+      color: white;
+    }
+    
+    .control-group {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .control-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s;
+    }
+    
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .control-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .page-counter {
+      font-weight: bold;
+      min-width: 80px;
+      text-align: center;
+    }
+    
+    .zoom-controls {
+      display: flex;
+      gap: 5px;
+    }
+    
+    /* Progress Bar */
+    .progress-container {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: var(--secondary);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    /* Thumbnails */
+    .thumbnails-container {
+      display: none;
+      position: absolute;
+      bottom: 70px;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      z-index: 100;
+      overflow-x: auto;
+      max-height: 120px;
+    }
+    
+    .thumbnails-container.active {
+      display: block;
+    }
+    
+    .thumbnail {
+      width: 60px;
+      height: 85px;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+      display: inline-block;
+      margin-right: 5px;
+      border: 2px solid transparent;
+    }
+    
+    .thumbnail:hover, .thumbnail.active {
+      opacity: 1;
+      border-color: var(--secondary);
+    }
+    
+    /* Fullscreen */
+    .fullscreen .flipbook-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      z-index: 1000;
+      border-radius: 0;
+    }
+    
+    .fullscreen #flipbook {
+      height: calc(100vh - 70px);
+    }
+    
+    .fullscreen .thumbnails-container {
+      bottom: 70px;
+    }
+    
+    /* Loading */
+    .flipbook-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.8);
+      z-index: 10;
+      font-size: 1.5rem;
+      color: var(--primary);
+    }
+    
+    /* Página Ativa */
+    .page-container {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .page-container.active {
+      display: block;
+    }
+    
+    .page-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    /* Responsivo */
+    @media (max-width: 768px) {
+      #flipbook {
+        height: 500px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      #flipbook {
+        height: 400px;
+      }
+      
+      .control-group {
+        gap: 8px;
+      }
+      
+      .control-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+      }
+    }
+  </style>
+{% endblock %}
+{% block content %}
+  <div class="flipbook-container">
+    <div class="flipbook-loading">
+      <i class="fas fa-spinner fa-spin"></i> Carregando flipbook...
+    </div>
+    
+    {% if pages %}
+      <div id="flipbook" style="display: none;">
+        <!-- Turn.js será inicializado aqui se funcionar -->
+      </div>
+      
+      <div id="simple-viewer">
+        {% for p in pages %}
+          <div class="page-container{% if forloop.first %} active{% endif %}" id="page-{{ forloop.counter }}">
+            <img class="page-image" src="{{ p.image.url }}" alt="Página {{ forloop.counter }}">
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="padding: 2em; text-align: center;">Nenhuma página encontrada para esta edição.</div>
+    {% endif %}
+    
+    <div class="thumbnails-container" id="thumbnailsContainer">
+      {% for p in pages %}
+        <div class="thumbnail" data-page="{{ forloop.counter }}" style="background-image: url('{{ p.image.url }}')"></div>
+      {% endfor %}
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    
+    <div class="flipbook-controls">
+      <div class="control-group">
+        <button class="control-btn" id="firstBtn" title="Primeira página">
+          <i class="fas fa-step-backward"></i>
+        </button>
+        <button class="control-btn" id="prevBtn" title="Página anterior">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="control-btn" id="nextBtn" title="Próxima página">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+        <button class="control-btn" id="lastBtn" title="Última página">
+          <i class="fas fa-step-forward"></i>
+        </button>
+      </div>
+      
+      <div class="page-counter" id="pageCounter">1 / {{ pages|length }}</div>
+      
+      <div class="control-group">
+        <button class="control-btn" id="thumbnailsBtn" title="Miniaturas">
+          <i class="fas fa-th"></i>
+        </button>
+        <div class="zoom-controls">
+          <button class="control-btn" id="zoomOutBtn" title="Reduzir zoom">
+            <i class="fas fa-search-minus"></i>
+          </button>
+          <button class="control-btn" id="zoomInBtn" title="Aumentar zoom">
+            <i class="fas fa-search-plus"></i>
+          </button>
+        </div>
+        <button class="control-btn" id="fullscreenBtn" title="Tela cheia">
+          <i class="fas fa-expand"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="issue-info" style="text-align: center; margin-top: 20px;">
+    <h1>{{ issue.title }} – Semana {{ issue.week_number }}</h1>
+    <p><strong>Período:</strong> {{ issue.start_date }} a {{ issue.end_date }}</p>
+  </div>
+  
+  <div class="actions" style="display: flex; justify-content: center; margin-top: 20px;">
+    <a class="btn btn-light" href="/">← Voltar</a>
+    <a class="btn" href="{{ issue.pdf.url }}" target="_blank" style="margin-left: 10px;">
+      <i class="fas fa-download"></i> Baixar PDF
+    </a>
+  </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Elementos DOM
+    const flipbook = $('#flipbook');
+    const simpleViewer = $('#simple-viewer');
+    const loading = $('.flipbook-loading');
+    const thumbnailsContainer = $('#thumbnailsContainer');
+    const thumbnailsBtn = $('#thumbnailsBtn');
+    const pageCounter = $('#pageCounter');
+    const progressBar = $('#progressBar');
+    const firstBtn = $('#firstBtn');
+    const prevBtn = $('#prevBtn');
+    const nextBtn = $('#nextBtn');
+    const lastBtn = $('#lastBtn');
+    const zoomInBtn = $('#zoomInBtn');
+    const zoomOutBtn = $('#zoomOutBtn');
+    const fullscreenBtn = $('#fullscreenBtn');
+    
+    const totalPages = parseInt("{{ pages|length|default:0 }}");
+    let currentPage = 1;
+    let currentZoom = 1;
+    let isFullscreen = false;
+    let turnJsEnabled = false;
+
+    // Tentar inicializar o Turn.js
+    function tryInitTurnJS() {
+      if (typeof $.fn.turn === 'function') {
+        try {
+          // Criar elementos para o turn.js
+          flipbook.empty();
+          for (let i = 1; i <= totalPages; i++) {
+            flipbook.append(`<div class="page" data-src="${$('#page-' + i + ' img').attr('src')}"></div>`);
+          }
+          
+          // Inicializar turn.js
+          flipbook.turn({
+            width: 900,
+            height: 600,
+            autoCenter: true
+          });
+          
+          flipbook.css('display', 'block');
+          simpleViewer.hide();
+          turnJsEnabled = true;
+          console.log('Turn.js inicializado com sucesso');
+          return true;
+        } catch (error) {
+          console.error('Erro ao inicializar Turn.js:', error);
+        }
+      }
+      return false;
+    }
+
+    // Inicializar visualizador simples
+    function initSimpleViewer() {
+      simpleViewer.show();
+      flipbook.hide();
+      turnJsEnabled = false;
+      console.log('Usando visualizador simples');
+      showPage(1);
+    }
+    
+    // Mostrar uma página específica
+    function showPage(pageNumber) {
+      if (pageNumber < 1 || pageNumber > totalPages) return;
+      
+      currentPage = pageNumber;
+      $('.page-container').removeClass('active');
+      $('#page-' + currentPage).addClass('active');
+      updateUI();
+    }
+    
+    // Atualizar UI
+    function updateUI() {
+      pageCounter.text(currentPage + ' / ' + totalPages);
+      
+      // Atualizar thumbnails ativas
+      $('.thumbnail').removeClass('active');
+      $('.thumbnail[data-page="' + currentPage + '"]').addClass('active');
+      
+      // Atualizar progresso
+      const progress = (currentPage / totalPages) + 0.1;
+      progressBar.css('width', progress + '%');
+      
+      // Atualizar estado dos botões
+      firstBtn.prop('disabled', currentPage <= 1);
+      prevBtn.prop('disabled', currentPage <= 1);
+      nextBtn.prop('disabled', currentPage >= totalPages);
+      lastBtn.prop('disabled', currentPage >= totalPages);
+    }
+    
+    // Configurar eventos de navegação
+    firstBtn.click(function() {
+      if (turnJsEnabled) {
+        flipbook.turn('page', 1);
+      } else {
+        showPage(1);
+      }
+    });
+    
+    prevBtn.click(function() {
+      if (turnJsEnabled) {
+        flipbook.turn('previous');
+      } else {
+        showPage(currentPage - 1);
+      }
+    });
+    
+    nextBtn.click(function() {
+      if (turnJsEnabled) {
+        flipbook.turn('next');
+      } else {
+        showPage(currentPage + 1);
+      }
+    });
+    
+    lastBtn.click(function() {
+      if (turnJsEnabled) {
+        flipbook.turn('page', totalPages);
+      } else {
+        showPage(totalPages);
+      }
+    });
+    
+    // Miniaturas
+    thumbnailsBtn.click(function() {
+      thumbnailsContainer.toggleClass('active');
+    });
+    
+    $('.thumbnail').click(function() {
+      const page = $(this).data('page');
+      if (turnJsEnabled) {
+        flipbook.turn('page', page);
+      } else {
+        showPage(page);
+      }
+    });
+    
+    // Zoom
+    zoomInBtn.click(function() {
+      currentZoom += 0.1;
+      $('.page-image').css('transform', `scale(${currentZoom})`);
+    });
+    
+    zoomOutBtn.click(function() {
+      currentZoom = Math.max(0.5, currentZoom - 0.1);
+      $('.page-image').css('transform', `scale(${currentZoom})`);
+    });
+    
+    // Tela cheia
+    fullscreenBtn.click(function() {
+      const container = document.querySelector('.flipbook-container');
+      if (!isFullscreen) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) { // Safari
+          container.webkitRequestFullscreen();
+        } else if (container.msRequestFullscreen) { // IE11
+          container.msRequestFullscreen();
+        }
+        isFullscreen = true;
+        fullscreenBtn.html('<i class="fas fa-compress"></i>');
+        container.classList.add('fullscreen');
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { // Safari
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { // IE11
+          document.msExitFullscreen();
+        }
+        isFullscreen = false;
+        fullscreenBtn.html('<i class="fas fa-expand"></i>');
+        container.classList.remove('fullscreen');
+      }
+    });
+    
+    // Atualize o estado ao sair do fullscreen manualmente
+    document.addEventListener('fullscreenchange', function() {
+      const container = document.querySelector('.flipbook-container');
+      if (!document.fullscreenElement) {
+        isFullscreen = false;
+        fullscreenBtn.html('<i class="fas fa-expand"></i>');
+        container.classList.remove('fullscreen');
+      }
+    });
+    
+    // Eventos de teclado
+    $(document).keydown(function(e) {
+      if (e.key === 'ArrowLeft') {
+        if (turnJsEnabled) flipbook.turn('previous');
+        else showPage(currentPage - 1);
+      } else if (e.key === 'ArrowRight') {
+        if (turnJsEnabled) flipbook.turn('next');
+        else showPage(currentPage + 1);
+      } else if (e.key === 'Home') {
+        if (turnJsEnabled) flipbook.turn('page', 1);
+        else showPage(1);
+      } else if (e.key === 'End') {
+        if (turnJsEnabled) flipbook.turn('page', totalPages);
+        else showPage(totalPages);
+      } else if (e.key === 'Escape' && isFullscreen) {
+        $('.flipbook-container').removeClass('fullscreen');
+        isFullscreen = false;
+        fullscreenBtn.html('<i class="fas fa-expand"></i>');
+      }
+    });
+    
+    // Inicialização
+    if (totalPages > 0) {
+      // Tentar usar Turn.js
+      if (!tryInitTurnJS()) {
+        initSimpleViewer();
+      }
+      
+      loading.hide();
+    } else {
+      loading.text('Nenhuma página encontrada.');
+    }
+  });
+</script>
+{% endblock %}
